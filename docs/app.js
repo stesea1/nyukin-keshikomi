@@ -24,6 +24,16 @@ function displayOrder(rows, si) {
 const $ = (id) => document.getElementById(id);
 let py = null;
 let sampleFiles = null;   // set by the sample button, cleared when the user picks files
+// The run button is clickable only when Python is ready and nothing else is in progress.
+const state = { ready: false, loadingSample: false, running: false };
+
+function updateRun() {
+  const b = $("run");
+  b.disabled = !state.ready || state.loadingSample || state.running;
+  b.textContent = !state.ready ? "Python を準備しています…"
+    : state.loadingSample ? "サンプルを読み込んでいます…"
+    : state.running ? "処理しています…" : "消込を実行";
+}
 
 function setStatus(text) { $("status").textContent = text; }
 function showError(text) { const e = $("error"); e.textContent = text; e.hidden = !text; }
@@ -35,9 +45,10 @@ async function boot() {
     py.unpackArchive(zip, "zip", { extractDir: "/lib/app" });
     py.FS.writeFile("/lib/app/web_runner.py", await (await fetch("runner.py")).text());
     py.runPython("import sys; sys.path.insert(0, '/lib/app'); import web_runner");
-    $("run").disabled = false;
-    $("run").textContent = "消込を実行";
+    state.ready = true;
+    updateRun();
   } catch (e) {
+    $("run").disabled = true;
     $("run").textContent = "準備に失敗しました";
     showError("Python 実行環境を読み込めませんでした。ネットワーク接続を確認して再読み込みしてください。\n" + e);
   }
@@ -76,7 +87,7 @@ async function run() {
   showError("");
   const f = chosenFiles();
   if (!f.bank.length || !f.invoices) { showError("入出金明細と請求書 CSV を選んでください。"); return; }
-  $("run").disabled = true;
+  state.running = true; updateRun();
   setStatus("処理しています…");
   try {
     resetFS();
@@ -110,7 +121,7 @@ async function run() {
     showError(String(e.message || e));
     setStatus("");
   } finally {
-    $("run").disabled = false;
+    state.running = false; updateRun();
   }
 }
 
@@ -190,10 +201,20 @@ function render(res) {
 }
 
 async function loadSample() {
-  const get = async (name) => new File([await (await fetch("sample/" + name)).blob()], name);
-  sampleFiles = { bank: [await get("bank_generic.csv")], invoices: await get("invoices.csv"), customers: await get("customers.csv") };
-  if (!$("bankAccount").value) $("bankAccount").value = "サンプル銀行";
-  describeChoice();
+  const get = async (name) => {
+    const r = await fetch("sample/" + name);
+    if (!r.ok) throw new Error(`サンプル ${name} を読み込めませんでした（${r.status}）`);
+    return new File([await r.blob()], name);
+  };
+  state.loadingSample = true; updateRun();
+  try {
+    const [bank, invoices, customers] = await Promise.all(["bank_generic.csv", "invoices.csv", "customers.csv"].map(get));
+    sampleFiles = { bank: [bank], invoices, customers };
+    if (!$("bankAccount").value) $("bankAccount").value = "サンプル銀行";
+    describeChoice();
+  } finally {
+    state.loadingSample = false; updateRun();
+  }
 }
 
 for (const id of ["bank", "invoices", "customers"]) {
