@@ -36,6 +36,7 @@ function updateRun() {
 }
 
 function setStatus(text) { $("status").textContent = text; }
+function sampleStatus(text, kind = "") { const e = $("sampleStatus"); e.textContent = text; e.className = "samplestatus " + kind; }
 function showError(text) { const e = $("error"); e.textContent = text; e.hidden = !text; }
 
 async function boot() {
@@ -207,18 +208,29 @@ async function loadSample() {
     return new File([await r.blob()], name);
   };
   state.loadingSample = true; updateRun();
+  sampleStatus("サンプルを読み込んでいます…");
   try {
     const [bank, invoices, customers] = await Promise.all(["bank_generic.csv", "invoices.csv", "customers.csv"].map(get));
     sampleFiles = { bank: [bank], invoices, customers };
     if (!$("bankAccount").value) $("bankAccount").value = "サンプル銀行";
     describeChoice();
+    sampleStatus(state.ready
+      ? "✓ サンプルを読み込みました。下の「消込を実行」を押してください。"
+      : "✓ サンプルを読み込みました。Python の準備ができると「消込を実行」が押せるようになります（初回は 30 秒ほど）。", "done");
+    $("run").scrollIntoView?.({ behavior: "smooth", block: "center" });
+  } catch (e) {
+    sampleStatus("サンプルを読み込めませんでした：" + (e.message || e), "fail");
+    throw e;
   } finally {
     state.loadingSample = false; updateRun();
   }
 }
 
 for (const id of ["bank", "invoices", "customers"]) {
-  $(id).addEventListener("change", () => { sampleFiles = null; describeChoice(); });
+  $(id).addEventListener("change", () => {
+    if (sampleFiles) sampleStatus("自分のファイルを使います（サンプルは解除しました）。");
+    sampleFiles = null; describeChoice();
+  });
 }
 $("sample").addEventListener("click", () => loadSample().catch((e) => showError(String(e))));
 $("run").addEventListener("click", run);

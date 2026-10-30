@@ -20,14 +20,17 @@
 <main>
   <section class="card">
     <h2><span class="step">1</span>ファイルを選ぶ</h2>
+    <div class="samplebox">
+      <button type="button" id="sample" class="secondary">まずはサンプルデータで試す</button>
+      <p id="sampleStatus" class="samplestatus" role="status" aria-live="polite">架空の会社の明細・請求書を読み込みます。自分のファイルは下で選べます。</p>
+    </div>
     <label class="field">入出金明細（ネットバンキング CSV または全銀フォーマット、複数可）
       <input type="file" id="bank" accept=".csv,.txt" multiple></label>
     <label class="field">請求書 CSV（売掛金の一覧）
       <input type="file" id="invoices" accept=".csv"></label>
     <label class="field">取引先マスタ CSV（任意：振込名義・振込依頼人コード）
       <input type="file" id="customers" accept=".csv"></label>
-    <p class="hint">列の形式は <a href="https://github.com/stesea1/nyukin-keshikomi#入力ファイル">README の「入力ファイル」</a> を参照してください。
-      <button type="button" id="sample" class="link">サンプルデータで試す</button></p>
+    <p class="hint">列の形式は <a href="https://github.com/stesea1/nyukin-keshikomi#入力ファイル">README の「入力ファイル」</a> を参照してください。</p>
     <p id="chosen" class="hint"></p>
   </section>
 
