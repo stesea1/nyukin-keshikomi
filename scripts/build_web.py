@@ -5,12 +5,15 @@
 - docs/keshikomi.zip : the keshikomi package, unpacked inside Pyodide in the browser.
   Deterministic (sorted, fixed timestamps), so rebuilding without changes gives the same bytes.
 - docs/sample/       : copies of sample/ for the "サンプルで試す" button.
+- docs/index.html    : app.js / style.css references get ?v=<content hash> (cache busting).
 
 tests/test_web_bundle.py fails if docs/ is out of date with the source, so run this after
-changing anything under keshikomi/ or sample/.
+changing anything under keshikomi/, sample/, docs/app.js or docs/style.css.
 """
 from __future__ import annotations
 
+import hashlib
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -33,12 +36,28 @@ def build_zip(dest: Path) -> None:
             z.writestr(info, p.read_bytes())
 
 
+def asset_version(name: str) -> str:
+    return hashlib.sha256((DOCS / name).read_bytes()).hexdigest()[:10]
+
+
+def stamp_index() -> None:
+    """Reference app.js / style.css as name?v=<content hash> so browsers cannot keep a stale copy
+    after an update (a cached old app.js with a new index.html breaks the page)."""
+    path = DOCS / "index.html"
+    html = path.read_text(encoding="utf-8")
+    for name in ("app.js", "style.css"):
+        html, n = re.subn(rf'(["\']){re.escape(name)}(\?v=[0-9a-f]+)?(["\'])', rf"\g<1>{name}?v={asset_version(name)}\g<3>", html)
+        assert n == 1, f"index.html must reference {name} exactly once"
+    path.write_text(html, encoding="utf-8")
+
+
 def main() -> None:
     DOCS.mkdir(exist_ok=True)
     build_zip(DOCS / "keshikomi.zip")
     (DOCS / "sample").mkdir(exist_ok=True)
     for name in SAMPLES:
         shutil.copyfile(ROOT / "sample" / name, DOCS / "sample" / name)
+    stamp_index()
     print(f"docs/keshikomi.zip ({len(package_files())} files), docs/sample/ ({len(SAMPLES)} files)")
 
 

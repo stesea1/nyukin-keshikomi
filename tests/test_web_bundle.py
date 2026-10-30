@@ -58,3 +58,11 @@ def test_runner_matches_cli(tmp_path, monkeypatch):
     assert res["files"] == ["journal.csv", "keshikomi_result.csv", "mf_journal_import.csv", "open_invoices.csv", "summary.md"]
     bad = json.loads(runner.run(json.dumps(["match", "--bank", "nope.csv", "--invoices", "nope.csv"])))
     assert bad["rc"] != 0 and "エラー" in bad["stderr"]
+
+
+def test_assets_are_cache_busted_with_current_hash():
+    import hashlib
+    html = (DOCS / "index.html").read_text(encoding="utf-8")
+    for name in ("app.js", "style.css"):
+        want = hashlib.sha256((DOCS / name).read_bytes()).hexdigest()[:10]
+        assert f'{name}?v={want}"' in html, f"index.html has a stale ?v= for {name}: run python scripts/build_web.py"
