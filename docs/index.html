@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Data never leaves the browser: network access is limited to this site and the Pyodide CDN. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval' 'unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>入金消込ツール（ブラウザ版）</title>
+<meta name="description" content="銀行の入出金明細と請求書を突き合わせて入金消込を自動化。ファイルはブラウザ内だけで処理され、外部に送信されません。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>入金消込ツール <small>ブラウザ版</small></h1>
+  <p>銀行の入出金明細と請求書（売掛金）を突き合わせて、消込結果・仕訳・マネーフォワード クラウド会計の取込 CSV を作ります。</p>
+  <p class="privacy">🔒 ファイルは<strong>このパソコンのブラウザの中だけ</strong>で処理され、どこにも送信・保存されません。
+    ページの通信先は、このサイト自身と Python 実行環境（Pyodide）の配信元だけに制限しています（<a href="#how">しくみ</a>）。</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2><span class="step">1</span>ファイルを選ぶ</h2>
+    <label class="field">入出金明細（ネットバンキング CSV または全銀フォーマット、複数可）
+      <input type="file" id="bank" accept=".csv,.txt" multiple></label>
+    <label class="field">請求書 CSV（売掛金の一覧）
+      <input type="file" id="invoices" accept=".csv"></label>
+    <label class="field">取引先マスタ CSV（任意：振込名義・振込依頼人コード）
+      <input type="file" id="customers" accept=".csv"></label>
+    <p class="hint">列の形式は <a href="https://github.com/stesea1/nyukin-keshikomi#入力ファイル">README の「入力ファイル」</a> を参照してください。
+      <button type="button" id="sample" class="link">サンプルデータで試す</button></p>
+    <p id="chosen" class="hint"></p>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary><h2><span class="step">2</span>設定（必要なときだけ）</h2></summary>
+      <div class="grid">
+        <label>普通預金の補助科目<input type="text" id="bankAccount" placeholder="例：〇〇銀行"></label>
+        <label>振込手数料として許容する不足額（円）<input type="number" id="feeTolerance" value="880" min="0"></label>
+        <label>まとめ入金で組み合わせる請求書の最大件数<input type="number" id="maxCombo" value="4" min="1" max="8"></label>
+        <label>明細の形式<select id="bankFormat"><option value="auto">自動判定</option><option value="generic">ネットバンキング CSV</option><option value="zengin">全銀フォーマット</option></select></label>
+        <label>全銀の年（2 桁）の解釈<select id="zenginEra"><option value="auto">自動</option><option value="reiwa">令和</option><option value="western">西暦</option></select></label>
+        <label>MF 取込 CSV の文字コード<select id="mfEncoding"><option value="sjis">Shift_JIS（既定）</option><option value="utf8">UTF-8</option></select></label>
+        <label class="check"><input type="checkbox" id="suspense">未消込・要確認の入金も仮受金で仕訳する</label>
+      </div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">3</span>消込を実行</h2>
+    <button type="button" id="run" class="primary" disabled>Python を準備しています…</button>
+    <p id="status" class="hint" role="status"></p>
+    <pre id="error" class="error" hidden></pre>
+  </section>
+
+  <section class="card" id="results" hidden>
+    <h2>結果</h2>
+    <p id="headline"></p>
+    <div id="downloads" class="downloads"></div>
+    <div id="filters" class="filters" role="group" aria-label="ステータスで絞り込み"></div>
+    <div class="tablewrap"><table id="table"></table></div>
+  </section>
+
+  <section class="card" id="how">
+    <h2>しくみ・注意</h2>
+    <ul>
+      <li>コマンドライン版 <a href="https://github.com/stesea1/nyukin-keshikomi">nyukin-keshikomi</a> と同じ Python コードを、
+        <a href="https://pyodide.org/">Pyodide</a>（WebAssembly 版 Python）でブラウザ内で動かしています。結果はコマンドライン版と同じです。</li>
+      <li>選んだファイルはブラウザのメモリ上だけで扱い、ページを閉じると消えます。サーバーへのアップロード機能はありません。</li>
+      <li>最初の 1 回だけ、Python 実行環境（約 10MB）を配信元から読み込みます。</li>
+      <li>自動で決めきれない入金は「要確認」「未消込」として理由と候補を出します。最終判断は担当者が行ってください。</li>
+      <li>サンプルデータの会社名・金額・口座はすべて架空です。</li>
+    </ul>
+  </section>
+</main>
+
+<footer>MIT License · <a href="https://github.com/stesea1/nyukin-keshikomi">GitHub</a></footer>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
