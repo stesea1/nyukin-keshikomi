@@ -17,6 +17,21 @@
 
 ---
 
+## ブラウザ版（インストール不要）
+
+**https://stesea1.github.io/nyukin-keshikomi/**
+
+コマンドラインに慣れていない経理担当者向けに、同じ処理をブラウザで使えるようにしたページです。
+明細・請求書・取引先マスタの CSV を選んで「消込を実行」を押すと、結果を表で確認でき、各ファイルをダウンロードできます。
+
+- **ファイルは外部に送信されません。** この Python パッケージを [Pyodide](https://pyodide.org/)（WebAssembly 版 Python）で
+  ブラウザ内で実行しています。ページの通信先は Content-Security-Policy でこのサイト自身と Pyodide の配信元だけに制限しています。
+- 処理はコマンドライン版と同じコードです。出力ファイルがコマンドライン版とバイト単位で一致することを
+  `scripts/web_selftest.mjs` で確認しています。
+- 「サンプルデータで試す」で架空のデータを使って動きを確認できます。
+
+---
+
 ## インストール
 
 ```bash
@@ -281,3 +296,14 @@ For each deposit the tool first identifies the customer, using the Zengin payer 
 - **MoneyForward import:** columns follow MoneyForward's published 27-column journal import layout. Tax category is `対象外` for bank, receivable and suspense lines, and left blank on bank-fee lines so the account default applies.
 
 All sample data is fictional. MIT License © 2026 Hao Yue.
+
+## ブラウザ版の開発
+
+`keshikomi/` や `sample/` を変更したら `docs/` を作り直します（作り直し忘れは `pytest` が検出します）。
+
+```bash
+python scripts/build_web.py                       # docs/keshikomi.zip と docs/sample/ を更新
+npm install pyodide@0.27.7 && node scripts/web_selftest.mjs   # ブラウザ版の出力が CLI と一致するか確認
+```
+
+GitHub Pages は「Settings → Pages → Deploy from a branch → main / docs」で公開します。
