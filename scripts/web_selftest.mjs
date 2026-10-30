@@ -66,6 +66,18 @@ for (const c of CASES) {
   console.log(`ok  ${c.bank.join(" + ")}: ${first(res.stdout)} (${res.files.length} files identical)`);
 }
 
+// results table: default filter is すべて, rows needing a person come first (display only)
+{
+  const js = readFileSync(docs("app.js"), "utf8");
+  const src = js.match(/const DISPLAY_ORDER = [^\n]+\nfunction displayOrder[\s\S]*?\n}\n/)[0];
+  const displayOrder = new Function(src + "return displayOrder;")();
+  const rows = [["a", "消込済"], ["b", "対象外"], ["c", "未消込"], ["d", "要確認"], ["e", "消込済"], ["f", "一部消込"], ["g", "要確認"]];
+  const got = displayOrder(rows, 1).map((r) => r[0]).join("");
+  if (got !== "dgcfaeb") { failed++; console.log("display order wrong", got); }
+  else if (!/\n  filter\("すべて"\);\n/.test(js)) { failed++; console.log("default filter is not すべて"); }
+  else console.log("ok  results table: default すべて, order 要確認 > 未消込 > 一部消込 > 消込済 > 対象外 (stable)");
+}
+
 // a broken input must come back as an error message, not a crash
 py.FS.writeFile("/work/in/broken.csv", new TextEncoder().encode("foo,bar\n1,2\n"));
 py.globals.set("ARGS", JSON.stringify(["match", "--bank", "/work/in/broken.csv", "--invoices", "/work/in/inv/invoices.csv"]));
