@@ -29,6 +29,7 @@ const CASES = [
   { bank: ["bank_generic.csv"], customers: true, opts: ["--bank-account", "サンプル銀行"] },
   { bank: ["bank_zengin.txt"], customers: true, opts: ["--mf-encoding", "utf8", "--suspense"] },
   { bank: ["bank_generic.csv", "bank_zengin.txt"], customers: false, opts: ["--fee-tolerance", "440", "--max-combo", "2"] },
+  { bank: ["bank_generic.csv"], customers: true, opts: ["--accept-unique-amount"] },
 ];
 
 let failed = 0;

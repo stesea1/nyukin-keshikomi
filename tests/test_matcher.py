@@ -92,10 +92,20 @@ def test_payer_code_identifies_customer():
     assert r.rule == "R1" and r.customer_id == "C2"
 
 
-def test_r7_unknown_payer_unique_amount_is_medium():
+def test_r7_unknown_payer_unique_amount_needs_review_by_default():
     invs = [inv("A-1", "C1", 132000), inv("A-2", "C2", 10000)]
-    [r] = run(invs, [dep(132000, "ｶ)ｵﾔｶﾞｲｼﾔ")])
+    [r] = run(invs, [dep(132000, "振込 ｶ)ｵﾔｶﾞｲｼﾔ")])
+    assert (r.status, r.rule, r.customer_id) == (Status.NEEDS_REVIEW, "R7", "C1")
+    assert [i.invoice_no for i in r.candidates] == ["A-1"] and not r.invoices
+    assert invs[0].open_amount == 132000                      # nothing cleared
+    assert "「ｶ)ｵﾔｶﾞｲｼﾔ」を追加" in r.reason                    # suggestion without the bank's 振込 prefix
+
+
+def test_r7_opt_in_clears_with_medium_confidence():
+    invs = [inv("A-1", "C1", 132000), inv("A-2", "C2", 10000)]
+    [r] = Matcher(invs, [], MatchConfig(accept_unique_amount=True)).run([dep(132000, "ｶ)ｵﾔｶﾞｲｼﾔ")])
     assert (r.status, r.rule, r.confidence, r.customer_id) == (Status.MATCHED, "R7", "medium", "C1")
+    assert "要確認" not in r.reason and invs[0].open_amount == 0
 
 
 def test_r8_r9_unknown_payer():

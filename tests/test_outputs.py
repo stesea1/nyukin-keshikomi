@@ -34,7 +34,7 @@ def test_suspense_option_books_unmatched_deposits():
     plain = build_journal(res)
     with_suspense = build_journal(res, suspense=True)
     extra = {ln.no for ln in with_suspense} - {ln.no for ln in plain}
-    assert len(extra) == 2  # the ambiguous 55,000 and the unknown 12,345
+    assert len(extra) == 3  # the ambiguous 55,000, the unknown 12,345 and the unique-amount 132,000 (R7)
 
 
 def test_mf_rows_have_27_columns():
@@ -67,7 +67,7 @@ def test_cli_end_to_end(tmp_path, capsys):
         header = next(csv.reader(f))
     assert header == MF_HEADER
     summary = (out / "summary.md").read_text(encoding="utf-8")
-    assert "自動消込率: 80%" in summary
+    assert "自動消込率: 70%" in summary   # R7 (unknown payer, unique amount) is 要確認 by default
     with open(out / "open_invoices.csv", encoding="utf-8-sig") as f:
         rows = list(csv.DictReader(f))
     assert {r["請求書番号"]: int(r["残額"]) for r in rows}["INV-2026-1009"] == 250000

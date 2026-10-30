@@ -45,6 +45,7 @@
         <label>全銀の年（2 桁）の解釈<select id="zenginEra"><option value="auto">自動</option><option value="reiwa">令和</option><option value="western">西暦</option></select></label>
         <label>MF 取込 CSV の文字コード<select id="mfEncoding"><option value="sjis">Shift_JIS（既定）</option><option value="utf8">UTF-8</option></select></label>
         <label class="check"><input type="checkbox" id="suspense">未消込・要確認の入金も仮受金で仕訳する</label>
+        <label class="check"><input type="checkbox" id="acceptUnique">振込名義が不明でも、金額が一致する請求書が 1 件だけなら消込済にする（既定は要確認）</label>
       </div>
     </details>
   </section>
@@ -79,6 +80,6 @@
 
 <footer>MIT License · <a href="https://github.com/stesea1/nyukin-keshikomi">GitHub</a></footer>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
-<script src="app.js?v=f79d00095c"></script>
+<script src="app.js?v=bffea90282"></script>
 </body>
 </html>
