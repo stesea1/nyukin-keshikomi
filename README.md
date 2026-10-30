@@ -74,6 +74,7 @@ python -m keshikomi match --bank sample/bank_zengin.txt \
 | `--fee-tolerance YEN` | 振込手数料として許容する不足額 | `880` |
 | `--overpay-max YEN` | これを超える過入金は要確認にする | 上限なし |
 | `--max-combo N` | まとめ入金で組み合わせる請求書の最大件数 | `4` |
+| `--accept-unique-amount` | 振込名義が不明でも、金額が一致する未入金請求書が 1 件だけなら消込済にする（確度 medium） | オフ（要確認） |
 | `--bank-account NAME` | 普通預金の補助科目 | 空 |
 | `--suspense` | 未消込・要確認の入金も仮受金で仕訳する | オフ |
 | `--start-no N` | 伝票番号（取引No）の開始値 | `1` |
@@ -141,13 +142,13 @@ C007,株式会社ミホン製作所,ﾐﾎﾝ(ｶ|ﾐﾎﾝｾｲｻｸｼﾖ,12
 
 ```markdown
 - 入金明細: 10 件 / 1,392,905円（出金 2 件は対象外）
-- 自動消込率: 80%（8/10 件）
+- 自動消込率: 70%（7/10 件）
 
 | ステータス | 件数 | 金額 |
 |---|---:|---:|
-| 消込済 | 7 | 1,025,560円 |
+| 消込済 | 6 | 893,560円 |
 | 一部消込 | 1 | 300,000円 |
-| 要確認 | 1 | 55,000円 |
+| 要確認 | 2 | 187,000円 |
 | 未消込 | 1 | 12,345円 |
 
 - 振込手数料として処理した差額: 440円
@@ -155,9 +156,9 @@ C007,株式会社ミホン製作所,ﾐﾎﾝ(ｶ|ﾐﾎﾝｾｲｻｸｼﾖ,12
 
 ## 確認が必要な入金
 | 勘定日 | 金額 | 振込依頼人名 | 状態 | 候補 | 理由 |
+| 2026-10-31 | 132,000円 | ｶ)ｴｸﾞｻﾞﾝﾌﾟﾙHD | 要確認 | INV-2026-1010 | 振込名義が取引先マスタに未登録・金額が一致する未入金請求書は 株式会社エグザンプル食品 の 1 件のみ。同じ会社なら取引先マスタの振込名義に「ｶ)ｴｸﾞｻﾞﾝﾌﾟﾙHD」を追加すると次回から自動で消込 |
 | 2026-10-31 | 55,000円 | ｶ)ｻﾝﾌﾟﾙｼﾖｳｼﾞ | 要確認 | INV-2026-1002 / INV-2026-1003 | 振込名義一致・同額の請求書が 2 件あり特定不可 |
 | 2026-10-31 | 12,345円 | ｽｽﾞｷ ｲﾁﾛｳ | 未消込 |  | 振込名義が取引先マスタに未登録・金額の一致する請求書なし |
-| 2026-10-31 | 132,000円 | ｶ)ｴｸﾞｻﾞﾝﾌﾟﾙHD | 確度 medium | INV-2026-1010 | 振込名義が取引先マスタに未登録・金額が未入金請求書の中で一意（要確認） |
 ```
 
 `journal.csv`（振込手数料差引の例）:
@@ -191,7 +192,7 @@ C007,株式会社ミホン製作所,ﾐﾎﾝ(ｶ|ﾐﾎﾝｾｲｻｸｼﾖ,12
 | R4 | 取引先特定済み、未入金請求書が 1 件のみで入金額がそれを上回る | 消込済（超過分は仮受金） |
 | R5 | 取引先特定済み、未入金請求書が 1 件のみで入金額が不足（手数料範囲外） | 一部消込（残額は次回以降） |
 | R6 | 取引先特定済みだが候補が複数・一意に決まらない | 要確認（候補を列挙） |
-| R7 | 取引先不明、金額が全未入金請求書の中で一意に一致 | 消込済（確度 medium、サマリーで要確認表示） |
+| R7 | 取引先不明、金額が全未入金請求書の中で一意に一致 | 要確認（候補を表示し、振込名義を取引先マスタに追加するよう案内）。`--accept-unique-amount` で消込済（確度 medium） |
 | R8 | 取引先不明、同額の請求書が複数 | 要確認 |
 | R9 | 上記いずれにも該当しない | 未消込 |
 
@@ -288,7 +289,7 @@ See the option table above. Key options include `--fee-tolerance` (default 880 y
 
 ### Matching rules
 
-For each deposit the tool first identifies the customer, using the Zengin payer code or else the normalized payer name. It then compares the deposit with that customer's open invoices: invoice-number reference (R0), exact amount (R1), fee shortfall (R2), combination of 2–4 invoices (R3), overpayment against the only open invoice (R4), and partial payment (R5). Anything ambiguous goes to review (R6). For an unknown payer, a deposit is matched only if its amount is unique among all open invoices, with medium confidence (R7). Otherwise it goes to review (R8) or stays unmatched (R9).
+For each deposit the tool first identifies the customer, using the Zengin payer code or else the normalized payer name. It then compares the deposit with that customer's open invoices: invoice-number reference (R0), exact amount (R1), fee shortfall (R2), combination of 2–4 invoices (R3), overpayment against the only open invoice (R4), and partial payment (R5). Anything ambiguous goes to review (R6). For an unknown payer whose amount is unique among all open invoices, the deposit goes to review with that invoice as the candidate, because a different company may have paid the same amount (R7; `--accept-unique-amount` clears it instead, with medium confidence). Otherwise it goes to review (R8) or stays unmatched (R9).
 
 ### Assumptions
 

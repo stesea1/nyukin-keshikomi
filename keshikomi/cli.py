@@ -34,6 +34,8 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--fee-tolerance", type=int, default=880, help="振込手数料として許容する不足額（円）")
     m.add_argument("--overpay-max", type=int, default=None, help="これを超える過入金は要確認にする（円）")
     m.add_argument("--max-combo", type=int, default=4, help="まとめ入金で組み合わせる請求書の最大件数")
+    m.add_argument("--accept-unique-amount", action="store_true",
+                   help="振込名義が不明でも、金額が未入金請求書の中で一意なら消込済にする（確度 medium）。既定は要確認")
     m.add_argument("--bank-account", default="", help="普通預金の補助科目（例: サンプル銀行）")
     m.add_argument("--suspense", action="store_true", help="未消込の入金を仮受金で仕訳する")
     m.add_argument("--start-no", type=int, default=1, help="仕訳の伝票番号の開始値")
@@ -50,7 +52,8 @@ def run_match(a: argparse.Namespace) -> int:
         txns += read_bank(f, a.bank_format, a.bank_encoding, mapping, a.zengin_era)
     invoices = read_invoices(a.invoices)
     customers = read_customers(a.customers) if a.customers else []
-    cfg = MatchConfig(fee_tolerance=a.fee_tolerance, overpay_max=a.overpay_max, max_combo=a.max_combo)
+    cfg = MatchConfig(fee_tolerance=a.fee_tolerance, overpay_max=a.overpay_max, max_combo=a.max_combo,
+                      accept_unique_amount=a.accept_unique_amount)
     results = Matcher(invoices, customers, cfg).run(txns)
 
     out = Path(a.out)

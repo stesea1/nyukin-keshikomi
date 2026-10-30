@@ -21,12 +21,17 @@ R5  partial payment    - customer has one open invoice and paid less (beyond the
 R6  ambiguous          - several candidates -> needs_review (never guessed).
 Payer unknown:
 R7  unique amount      - exactly one open invoice in the whole ledger has the
-                         same amount -> matched with confidence "medium".
+                         same amount -> needs_review with that invoice as the
+                         candidate (default), because an unknown payer may be a
+                         different company paying the same amount. With
+                         accept_unique_amount=True it is matched instead, with
+                         confidence "medium".
 R8  ambiguous amount   - several invoices with that amount -> needs_review.
 R9  no match           - unmatched, listed for manual handling.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from itertools import combinations
 
@@ -41,6 +46,7 @@ class MatchConfig:
     max_combo: int = 4                # まとめ入金: max invoices in one deposit
     combo_pool: int = 12              # only the oldest N open invoices are combined
     min_ref_digits: int = 6           # invoice number digits needed for R0
+    accept_unique_amount: bool = False  # R7: clear an unknown payer's deposit on a unique amount
 
 
 class Matcher:
@@ -180,7 +186,12 @@ class Matcher:
         if len(exact) == 1:
             inv = exact[0]
             res.customer_id, res.customer_name = inv.customer_id, inv.customer_name
-            self._settle(res, exact, "R7", f"{how}・金額が未入金請求書の中で一意（要確認）", "medium")
+            if self.cfg.accept_unique_amount:
+                self._settle(res, exact, "R7", f"{how}・金額が未入金請求書の中で一意のため消込（確度 medium：振込名義を確認）", "medium")
+            else:
+                self._review(res, exact, "R7",
+                             f"{how}・金額が一致する未入金請求書は {inv.customer_name} の 1 件のみ。"
+                             f"同じ会社なら取引先マスタの振込名義に「{_bare_payer(res.txn.payer_name)}」を追加すると次回から自動で消込")
             return
         if len(exact) > 1:
             self._review(res, exact, "R8", f"{how}・同額の請求書が {len(exact)} 件")
@@ -217,6 +228,11 @@ class Matcher:
             i.paid += i.open_amount
         if not res.customer_id and invs:
             res.customer_id, res.customer_name = invs[0].customer_id, invs[0].customer_name
+
+
+def _bare_payer(name: str) -> str:
+    """Payer name as it should go into the customer master: without the bank's 振込 prefix."""
+    return re.sub(r"^\s*(振込|フリコミ|ﾌﾘｺﾐ)\s*", "", name or "").strip()
 
 
 def match(transactions: list[BankTransaction], invoices: list[Invoice],

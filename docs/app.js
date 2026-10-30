@@ -107,6 +107,7 @@ async function run() {
               "--max-combo", String(Math.min(8, Math.max(1, parseInt($("maxCombo").value || "4", 10)))),
               "--bank-account", $("bankAccount").value.trim(), "--mf-encoding", $("mfEncoding").value);
     if ($("suspense").checked) args.push("--suspense");
+    if ($("acceptUnique").checked) args.push("--accept-unique-amount");
 
     py.globals.set("ARGS", JSON.stringify(args));
     const res = JSON.parse(py.runPython("web_runner.run(ARGS)"));
