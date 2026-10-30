@@ -13,6 +13,14 @@ const FILE_LABELS = {
   "summary.md": "サマリー",
 };
 
+// Display order of the results table: rows that need a person first. Display only; the
+// downloaded files keep the CLI's order. Stable, so rows keep their original order within a status.
+const DISPLAY_ORDER = ["要確認", "未消込", "一部消込", "消込済", "対象外"];
+function displayOrder(rows, si) {
+  const rank = (s) => { const k = DISPLAY_ORDER.indexOf(s); return k < 0 ? DISPLAY_ORDER.length : k; };
+  return rows.map((r, i) => [r, i]).sort((a, b) => rank(a[0][si]) - rank(b[0][si]) || a[1] - b[1]).map((x) => x[0]);
+}
+
 const $ = (id) => document.getElementById(id);
 let py = null;
 let sampleFiles = null;   // set by the sample button, cleared when the user picks files
@@ -155,7 +163,7 @@ function render(res) {
   const thead = table.createTHead().insertRow();
   for (const i of show) { const th = document.createElement("th"); th.textContent = header[i]; thead.appendChild(th); }
   const body = table.createTBody();
-  for (const r of rows) {
+  for (const r of displayOrder(rows, si)) {
     const tr = body.insertRow(); tr.dataset.status = r[si];
     for (const i of show) {
       const td = tr.insertCell(); td.textContent = r[i];
@@ -178,7 +186,7 @@ function render(res) {
     b.addEventListener("click", () => filter(s));
     fl.appendChild(b);
   }
-  filter(counts["要確認"] || counts["未消込"] ? (counts["要確認"] ? "要確認" : "未消込") : "すべて");
+  filter("すべて");
 }
 
 async function loadSample() {
