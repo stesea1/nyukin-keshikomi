@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nyukin-keshikomi"
+version = "0.1.0"
+description = "銀行入金明細と請求書の自動消込・仕訳CSV作成ツール (bank deposit to invoice reconciliation for Japanese SMEs)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Hao Yue" }]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+keshikomi = "keshikomi.cli:main"
+
+[tool.setuptools]
+packages = ["keshikomi", "keshikomi.readers"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
