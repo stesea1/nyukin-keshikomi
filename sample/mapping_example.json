@@ -1,0 +1,8 @@
+{
+  "date": "日付",
+  "payer": "お取引内容",
+  "withdrawal": "お引出し",
+  "deposit": "お預入れ",
+  "description": "メモ",
+  "skip_rows": 0
+}
